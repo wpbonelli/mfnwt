@@ -53,6 +53,10 @@ jobs:
           pixi-version: v0.41.4
           manifest-path: "${{ env.PROGRAM_NAME }}/pixi.toml"
 
+      - name: Pixi post install
+        working-directory: ${{ env.PROGRAM_NAME }}
+        run: pixi run install
+
       - name: Set ostag
         shell: bash
         working-directory: ${{ env.PROGRAM_NAME }}
@@ -154,6 +158,16 @@ jobs:
         with:
           path: ${{ env.PROGRAM_NAME }}
 
+      - name: Setup pixi
+        uses: prefix-dev/setup-pixi@v0.9.4
+        with:
+          pixi-version: v0.41.4
+          manifest-path: "${{ env.PROGRAM_NAME }}/pixi.toml"
+
+      - name: Pixi post install
+        working-directory: ${{ env.PROGRAM_NAME }}
+        run: pixi run install
+
       - name: Extract version number from the main meson.build file
         working-directory: ${{ env.PROGRAM_NAME }}
         run: |
@@ -168,6 +182,22 @@ jobs:
 
       - name: List distribution files
         run: ls -l ${{ env.DIST }}
+
+      - name: Generate programs registry
+        working-directory: ${{ env.PROGRAM_NAME }}
+        run: |
+          pixi run python -m modflow_devtools.programs.make_registry \
+            --repo ${{ github.repository }} \
+            --dists ../${{ env.DIST }}/*.zip \
+            --version v${{ env.PROGRAM_VERSION }} \
+            --programs ${{ env.PROGRAM_NAME }} \
+            --output ../${{ env.DIST }}/programs.toml \
+            --compute-hashes \
+            --verbose
+
+      - name: Show generated programs registry
+        working-directory: ${{ env.DIST }}
+        run: cat programs.toml
 
       - name: Create release
         if: github.event_name == 'workflow_dispatch'
